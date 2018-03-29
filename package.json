@@ -1,5 +1,8 @@
 {
   "devDependencies": {
     "zabbix-node": "^0.2.0"
+  },
+  "dependencies": {
+    "get-json": "^1.0.0"
   }
 }
