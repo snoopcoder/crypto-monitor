@@ -85,7 +85,7 @@ const  mysql = require('mysql2/promise');
     connection = await mysql.createConnection({
       host: "192.168.88.31",
       user: "scode",
-      password: "master",
+      password: "dfdfdfdf",
       database: "cryptomonitor"
     });
   } catch (e) {
