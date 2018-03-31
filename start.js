@@ -5,17 +5,15 @@ const dedent = require("dedent");
 var moment = require("moment");
 const phin = require("phin").promisified;
 
+// Подключение конфига
+var config = require("./config.json");
+
 var client = new zabbixNode(
   "http://zbxs.e5-nsk.ru/api_jsonrpc.php",
   "script",
   "123123"
 );
 var hostid = "10211";
-
-// Подключение конфига
-var config = require("./config.json");
-// // Использование конфига
-console.dir(config.port);
 
 // Should be call login at the first time
 /*client.login(function(error, resp, body) {
@@ -30,7 +28,7 @@ client.call('host.get', {'hostids': hostid}, function(error, resp, body) {
     console.log(body);
 }); */
 getData(Done);
-//writeData(Done);
+//writeData(Done, 2, moment().format("YYYY-MM-DD HH:mm:ss"), "0.001", "0");
 
 function Done(err, Data) {
   if (err) console.log(err, Data);
@@ -38,21 +36,27 @@ function Done(err, Data) {
 }
 
 async function getData(cb) {
-  var url =
-    "https://hashfaster.com/api/wallet?address=UfxfN9VbiFZzCv62g71QzZhLT8HhwUmnh4";
+  let res = {};
+  let url =
+    "http://dwarfpool.com/eth/api?wallet=0x1e758cc212cf5e2af9cd04e9aca388a9d1cc6e77&email=eth@example.com";
   try {
     //var restp = await asyncgetJSON(url);
-    const res = await phin({
-      url:
-        "https://hashfaster.com/api/wallet?address=UfxfN9VbiFZzCv62g71QzZhLT8HhwUmnh4",
+    res = await phin({
+      url: url,
       parse: "json"
     });
 
-    console.log(res.body);
+    //console.log(res.body);
     //console.log(restp);
   } catch (e) {
     return cb("Unexpected error occurred in createConnection", e);
   }
+  //writeData(Done, 2, moment().format("YYYY-MM-DD HH:mm:ss"), "0.001", "0");
+  let ondate = moment().format("YYYY-MM-DD HH:mm:ss");
+  let currency_id = 1;
+  let balance = res.body.wallet_balance; //wallet_balance
+  let balance_immature = 0;
+  writeData(Done, currency_id, ondate, balance, balance_immature);
 }
 
 function asyncgetJSON(url) {
@@ -67,32 +71,23 @@ function asyncgetJSON(url) {
   });
 }
 
-async function writeData(cb) {
-  var connection;
-
-  /*
-const  mysql = require('mysql2/promise');
-  // create the connection
-  const connection = await mysql.createConnection({host:'localhost', user: 'root', database: 'test'});
-  // query database
-  const [rows, fields] = await connection.execute('SELECT * FROM `table` WHERE `name` = ? AND `age` > ?', ['Morty', 14]);
-
- */
-
-  // create the connection to database
-
+async function writeData(cb, currency_id, ondate, balance, balance_immature) {
+  let connection;
   try {
     connection = await mysql.createConnection({
-      host: "192.168.88.31",
-      user: "scode",
-      password: "dfdfdfdf",
-      database: "cryptomonitor"
+      host: config.sql.host,
+      user: config.sql.user,
+      password: config.sql.password,
+      database: config.sql.database
     });
   } catch (e) {
-    return cb("Unexpected error occurred in createConnection", e.message);
+    return cb(
+      "Unexpected error occurred in createConnection during writeData processing - ",
+      e.message
+    );
   }
 
-  console.log("DB connected");
+  //console.log("DB connected");
   /*var [rows, fields] = await connection.execute('show databases');
  console.log(rows);*/
   /*
@@ -112,7 +107,7 @@ const  mysql = require('mysql2/promise');
     console.log("fgfgfgfgfgfgfg");
   });*/
 
-  let id = 2;
+  //let id = 2;
   let dnow = moment().format("YYYY-MM-DD HH:mm:ss");
   try {
     await connection.execute(
@@ -120,12 +115,16 @@ const  mysql = require('mysql2/promise');
     INSERT INTO  balances SET 
     ondate=?, 
     currency_id=?,
-    value=10.2`,
-      [dnow, id]
+    balance=?,
+    balance_immature=?`,
+      [ondate, currency_id, balance, balance_immature]
     );
   } catch (e) {
     connection.end();
-    return cb("Unexpected error occurred in INSERT INTO", e.message);
+    return cb(
+      "Unexpected error occurred in INSERT during writeData processing -",
+      e.message
+    );
   }
 
   console.log("INSERT done");
