@@ -53,10 +53,10 @@ async function getData(cb) {
   }
   //writeData(Done, 2, moment().format("YYYY-MM-DD HH:mm:ss"), "0.001", "0");
   let ondate = moment().format("YYYY-MM-DD HH:mm:ss");
-  let currency_id = 1;
+  let wallet_id = 2;
   let balance = res.body.wallet_balance; //wallet_balance
   let balance_immature = 0;
-  writeData(Done, currency_id, ondate, balance, balance_immature);
+  writeData(Done, wallet_id, ondate, balance, balance_immature);
 }
 
 function asyncgetJSON(url) {
@@ -114,7 +114,7 @@ async function writeData(cb, currency_id, ondate, balance, balance_immature) {
       dedent`
     INSERT INTO  balances SET 
     ondate=?, 
-    currency_id=?,
+    wallet_id=?,
     balance=?,
     balance_immature=?`,
       [ondate, currency_id, balance, balance_immature]
