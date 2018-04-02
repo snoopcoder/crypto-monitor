@@ -4,9 +4,21 @@ var mysql = require("mysql2/promise");
 const dedent = require("dedent");
 var moment = require("moment");
 const phin = require("phin").promisified;
-
+var get = require("lodash.get");
 // Подключение конфига
 var config = require("./config.json");
+//--------------------------------------
+/*
+fix
+https://www.ssllabs.com/ssltest/analyze.html?d=graviex.net
+Unexpected error occurred in createConnection { Error: unable to verify the first certificate
+    at TLSSocket.onConnectSecure (_tls_wrap.js:1036:34)
+    at TLSSocket.emit (events.js:127:13)
+    at TLSSocket._finishInit (_tls_wrap.js:633:8) code: 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' }
+*/
+//--------------------------------------
+
+test(Done);
 
 var client = new zabbixNode(
   "http://zbxs.e5-nsk.ru/api_jsonrpc.php",
@@ -27,7 +39,7 @@ var hostid = "10211";
 client.call('host.get', {'hostids': hostid}, function(error, resp, body) {
     console.log(body);
 }); */
-getData(Done);
+//getData(Done);
 //writeData(Done, 2, moment().format("YYYY-MM-DD HH:mm:ss"), "0.001", "0");
 
 function Done(err, Data) {
@@ -129,4 +141,134 @@ async function writeData(cb, currency_id, ondate, balance, balance_immature) {
 
   console.log("INSERT done");
   connection.end();
+}
+
+async function test(cb) {
+  let TikersData = {
+    PROTON: {
+      url: "https://graviex.net//api/v2/tickers/protonbtc.json",
+      last: "",
+      volume: "",
+      ask: "",
+      bid: "",
+      chek: ""
+    },
+    ULT: {
+      url: "https://api.crypto-bridge.org/api/v1/ticker",
+      last: "[14].last",
+      volume: "",
+      ask: "",
+      bid: "",
+      chek: "id=ULT_BTC"
+    }
+  };
+  const https = require("https");
+
+  var rootCas = require("ssl-root-cas/latest").create();
+
+  let outs = rootCas.addFile(
+    __dirname + "/config/ssl/comodorsadomainvalidationsecureserverca.crt"
+  );
+  https.globalAgent.options.ca = rootCas;
+  // will work with all https requests will all libraries (i.e. request.js)
+  //var https = (require("https").globalAgent.options.ca = rootCas);
+
+  https
+    .get("https://graviex.net//api/v2/tickers/protonbtc.json", res => {
+      //console.log("statusCode:", res.statusCode);
+      //console.log("headers:", res.headers);
+
+      res.on("data", d => {
+        process.stdout.write(d);
+      });
+    })
+    .on("error", e => {
+      console.error(e);
+    });
+
+  var request = require("request");
+
+  var url = "https://graviex.net//api/v2/tickers/protonbtc.json";
+  /*
+  request(
+    {
+      url: url,
+      json: true
+    },
+    function(error, response, body) {
+      if (!error && response.statusCode === 200) {
+        console.log(body); // Print the json response
+      }
+    }
+  );
+*/
+  url = "https://api.crypto-bridge.org/api/v1/ticker";
+
+  request(
+    {
+      url: url,
+      json: true
+    },
+    function(error, response, body) {
+      if (!error && response.statusCode === 200) {
+        // let lastKey = "[2].last";
+        // let data1 = get(body, "[2].last");
+        //console.log(get(Obj, "data3[1]")); //boo!
+        //console.log(data1); // Print the json response
+      }
+    }
+  );
+
+  /*
+  let Obj = {
+    data1: "ddd",
+    data2: "fff",
+    data3: ["gg", "hh"]
+  };
+  let properties1 = "data1";
+  let properties2 = "data3[1]";
+  console.log(Obj[properties1]); //ok
+  console.log(get(Obj, "data3[1]")); //boo!
+  console.log("ok");
+  */
+
+  //--
+  let res = {};
+  url = "https://graviex.net//api/v2/tickers/protonbtc.json";
+  try {
+    //var restp = await asyncgetJSON(url);
+    res = await phin({
+      url: url,
+      parse: "json"
+    });
+
+    let last = get(res, "body.ticker.last");
+    let volume = get(res, "body.ticker.volbtc");
+    let ask = get(res, "body.ticker.sell");
+    let bid = get(res, "body.ticker.buy");
+    console.log("last:", last);
+    console.log("volume:", volume);
+    console.log("ask:", ask);
+    console.log("bid:", bid);
+  } catch (e) {
+    return cb("Unexpected error occurred in createConnection", e);
+  }
+
+  //
+
+  /*
+  let url = "https://graviex.net//api/v2/tickers/protonbtc.json";
+  try {
+    //var restp = await asyncgetJSON(url);
+    res = await phin({
+      url: url,
+      parse: "json"
+    });
+
+    //console.log(res.body);
+    //console.log(restp);
+  } catch (e) {
+    return cb("Unexpected error occurred in createConnection", e);
+  }
+  let balance = res.body.wallet_balance;*/
 }
