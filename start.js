@@ -1,6 +1,5 @@
-//----tips
+//-------tips------------------------
 //process.stdout.write(d);
-
 
 var zabbixNode = require("zabbix-node");
 var getJSON = require("get-json");
@@ -9,7 +8,6 @@ const dedent = require("dedent");
 var moment = require("moment");
 const phin = require("phin").promisified;
 var get = require("lodash.get");
-
 
 const https = require("https");
 /*------<fix>-----------------------
@@ -31,7 +29,6 @@ https.globalAgent.options.ca = rootCas;
 
 // Подключение конфига
 var config = require("./config.json");
-
 
 var client = new zabbixNode(
   "http://zbxs.e5-nsk.ru/api_jsonrpc.php",
@@ -55,9 +52,13 @@ client.call('host.get', {'hostids': hostid}, function(error, resp, body) {
 //getData(Done);
 //writeData(Done, 2, moment().format("YYYY-MM-DD HH:mm:ss"), "0.001", "0");
 
-function Done(err, Data) {
-  if (err) console.log(err, Data);
-  else console.log(Data);
+function Error(err, Data) {
+  if (err) {
+    console.log(err, Data);
+    return 0;
+  }
+  //else console.log(Data);
+  //return Data;
 }
 
 async function getData(cb) {
@@ -81,7 +82,7 @@ async function getData(cb) {
   let wallet_id = 2;
   let balance = res.body.wallet_balance; //wallet_balance
   let balance_immature = 0;
-  writeData(Done, wallet_id, ondate, balance, balance_immature);
+  //writeData(Done, wallet_id, ondate, balance, balance_immature);
 }
 
 function asyncgetJSON(url) {
@@ -97,7 +98,6 @@ function asyncgetJSON(url) {
 }
 
 async function writeData(cb, currency_id, ondate, balance, balance_immature) {
-
   //console.log("DB connected");
   /*var [rows, fields] = await connection.execute('show databases');
  console.log(rows);*/
@@ -272,11 +272,9 @@ async function test(cb) {
   let balance = res.body.wallet_balance;*/
 }
 
-
-async function getTiker (cb,id) {
-
+async function getTiker(cb, id) {
   //db.execute('SELECT * FROM users WHERE LIMIT = ?', [10]).spread(function (users) {
-   // console.log('Hello users', users);
+  // console.log('Hello users', users);
 
   let TikersData = {
     PROTON: {
@@ -296,45 +294,200 @@ async function getTiker (cb,id) {
       chek: "id=ULT_BTC"
     }
   };
+}
 
+async function start() {
+  // do something
+  let connection = await DBconnect();
+  if (!connection) {
+    console.log("DBconnect error -cannot connect to DB, exit");
+    return;
+  }
+
+  Task5min(connection);
+  //Запуск функции шедулера
+  //
+  // начать повторы с интервалом 5мин
+  var timerId = setInterval(() => {
+    Task5min(this.connection);
+  }, 300000);
+}
+
+async function Task5min(connection) {
+  //получить список всех валют указаных в проверке 5 мин и запусить их проверку через цикл
+  let currencies_tickers_conf_List = await Get_currencies_tickers_conf_List(
+    connection
+  );
+  Pull_currencies_tickers(connection, currencies_tickers_conf_List);
+  await sleep();
+
+  //connection;
+  //.execute("SELECT * FROM currencies_tickers_conf WHERE id = ?", [5])
+  let [configs, fields] = await connection.query(
+    "SELECT  id FROM currencies_tickers_conf"
+  );
+  for (let config of configs) {
+  }
+
+  /*
+  let [rows, fields] = await connection.query(
+    "SELECT * FROM currencies_tickers_conf WHERE id = ?",
+    [3]
+  );*/
+
+  let sheduler5min = [5];
+  for (let id of sheduler5min) {
+    //getData(id, Error);
+  }
+
+  //получить список всех пулов указаных в проверке 5 мин и запусить их проверку через цикл
+  //
+}
+
+//---- test for
+function timeout(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+async function sleep() {
+  await timeout(60000);
+}
+//----
+
+async function Pull_currensy_ticker(connection, currencies_tickers_conf_id) {
+  //console.log("start debug Pull_currensy_ticker");
+  let [
+    currency_id,
+    exchange_id,
+    ticker_name,
+    url,
+    last_key,
+    volume_key,
+    ask_key,
+    bid_key,
+    chek
+  ] = await Get_currency_ticker_options(connection, currencies_tickers_conf_id);
+  let [dnow, last, volume, ask, bid] = await Get_currency_ticker_WEB(
+    currency_id,
+    exchange_id,
+    ticker_name,
+    url,
+    last_key,
+    volume_key,
+    ask_key,
+    bid_key,
+    chek
+  );
+
+  /*
+    let last = get(res, "body.ticker.last");
+    let volume = get(res, "body.ticker.volbtc");
+    let ask = get(res, "body.ticker.sell");
+    let bid = get(res, "body.ticker.buy");
+    */
+  Inset_currency_ticker_DB();
+}
+async function Inset_currency_ticker_DB(dnow, last, volume, ask, bid) {
+  console.log("get start insert");
+}
+
+async function Get_currency_ticker_WEB(
+  currency_id,
+  exchange_id,
+  ticker_name,
+  url,
+  last_key,
+  volume_key,
+  ask_key,
+  bid_key,
+  chek
+) {
   let res = {};
-  let url = "https://graviex.net//api/v2/tickers/protonbtc.json";
+  let dnow = moment().format("YYYY-MM-DD HH:mm:ss");
+  //let url = "https://graviex.net//api/v2/tickers/protonbtc.json";
   try {
     //var restp = await asyncgetJSON(url);
     res = await phin({
       url: url,
       parse: "json"
     });
-
-    let last = get(res, "body.ticker.last");
-    let volume = get(res, "body.ticker.volbtc");
-    let ask = get(res, "body.ticker.sell");
-    let bid = get(res, "body.ticker.buy");
-    console.log("last:", last);
-    console.log("volume:", volume);
-    console.log("ask:", ask);
-    console.log("bid:", bid);
   } catch (e) {
-    return cb("Unexpected error occurred in createConnection", e);
+    return Error("cannot get data frome web ", url, e);
   }
-  
+  let last = get(res, last_key);
+  let volume = 0;
+  if (volume_key) volume = get(res, volume_key);
+  let ask = 0;
+  if (ask_key) ask = get(res, ask_key);
+  let bid = 0;
+  if (bid_key) bid = get(res, bid_key);
+  if (chek) {
+    console.log("проверка не реализована");
+  }
+  console.log(dnow, last, volume, ask, bid);
+  return [dnow, last, volume, ask, bid];
 }
 
-
-const start = async () => {
-  // do something
-  let connection  =  await  DBconnect(Done,this.connection);
-  if (!connection){
-    console.log('DBconnect error, exit')
-    return;
-  }
-  console.log('ca')
+async function Get_currency_ticker_options(
+  connection,
+  currencies_tickers_conf_id
+) {
+  //todo try
+  let [options, fields] = await connection.query(
+    "SELECT * FROM currencies_tickers_conf WHERE id = ?",
+    [currencies_tickers_conf_id]
+  );
+  // to do  check (options.length == 1)
+  //let id = options[0].id;
+  let currency_id = options[0].currency_id;
+  let exchange_id = options[0].exchange_id;
+  let ticker_name = options[0].ticker_name;
+  let url = options[0].url;
+  let last_key = options[0].last_key;
+  let volume_key = options[0].volume_key;
+  let ask_key = options[0].ask_key;
+  let bid_key = options[0].bid_key;
+  let chek = options[0].chek;
+  return [
+    currency_id,
+    exchange_id,
+    ticker_name,
+    url,
+    last_key,
+    volume_key,
+    ask_key,
+    bid_key,
+    chek
+  ];
 }
 
+function Pull_currencies_tickers(
+  connection,
+  currencies_tickers_conf_List_Array
+) {
+  for (let currencies_tickers_conf_id of currencies_tickers_conf_List_Array) {
+    Pull_currensy_ticker(connection, currencies_tickers_conf_id);
+  }
+}
 
+//currencies_tickers_conf
+async function Get_currencies_tickers_conf_List(connection) {
+  //try   todo
+  let [currencies_tickers_conf_List, fields] = await connection.query(
+    "SELECT * FROM sheduler5min"
+  );
+  let currencies_tickers_conf_List_Array = [];
+  for (let currencies_ticker of currencies_tickers_conf_List) {
+    currencies_tickers_conf_List_Array.push(
+      currencies_ticker.currencies_tickers_conf_id
+    );
+  }
+  return currencies_tickers_conf_List_Array;
+}
 
-async function DBconnect(cb,connection)
-{  
+async function getCurrenses(connection, currensysArray) {}
+
+async function DBconnect() {
+  let connection;
   try {
     connection = await mysql.createConnection({
       host: config.sql.host,
@@ -343,13 +496,9 @@ async function DBconnect(cb,connection)
       database: config.sql.database
     });
   } catch (e) {
-    return cb(
-      "Unexpected error occurred in createConnection during DBconnect processing - ",
-      e.message
-    );
+    return 0;
   }
   return connection;
-
 }
 
 //test(Done);
