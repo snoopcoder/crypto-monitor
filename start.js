@@ -54,7 +54,7 @@ client.call('host.get', {'hostids': hostid}, function(error, resp, body) {
 
 function Error(err, Data) {
   if (err) {
-    console.log(err, Data);
+    console.log(moment().format("YYYY-MM-DD HH:mm:ss") + " " + err + " " + Data);
     return 0;
   }
   //else console.log(Data);
@@ -304,12 +304,17 @@ async function start() {
     return;
   }
 
+  //первый запуск при инициализации
   Task5min(connection);
+  //Task60min(connection);
+  //Task24h(connection); но тут лучше наверное переделать на расписание по времени или вобще все переделать ан расписание. чтоб и 5 мин таймер запусался в кратное время. и часовой
+
+
   //Запуск функции шедулера
   //
   // начать повторы с интервалом 5мин
   var timerId = setInterval(() => {
-    Task5min(this.connection);
+    Task5min(connection);
   }, 300000);
 }
 
@@ -319,7 +324,11 @@ async function Task5min(connection) {
     connection
   );
   Pull_currencies_tickers(connection, currencies_tickers_conf_List);
-  await sleep();
+  //Pull_pools_grubeddata(connection, pools_grubeddata_conf_List)
+
+
+
+  //await sleep();
 
   //connection;
   //.execute("SELECT * FROM currencies_tickers_conf WHERE id = ?", [5])
@@ -334,12 +343,12 @@ async function Task5min(connection) {
     "SELECT * FROM currencies_tickers_conf WHERE id = ?",
     [3]
   );*/
-
+/*
   let sheduler5min = [5];
   for (let id of sheduler5min) {
     //getData(id, Error);
   }
-
+*/
   //получить список всех пулов указаных в проверке 5 мин и запусить их проверку через цикл
   //
 }
@@ -352,10 +361,18 @@ async function sleep() {
   await timeout(60000);
 }
 //----
-
+let currency_id,
+exchange_id,
+ticker_name,
+url,
+last_key,
+volume_key,
+ask_key,
+bid_key,
+chek;
 async function Pull_currensy_ticker(connection, currencies_tickers_conf_id) {
   //console.log("start debug Pull_currensy_ticker");
-  let [
+  [
     currency_id,
     exchange_id,
     ticker_name,
@@ -366,17 +383,29 @@ async function Pull_currensy_ticker(connection, currencies_tickers_conf_id) {
     bid_key,
     chek
   ] = await Get_currency_ticker_options(connection, currencies_tickers_conf_id);
-  let [dnow, last, volume, ask, bid] = await Get_currency_ticker_WEB(
-    currency_id,
-    exchange_id,
-    ticker_name,
-    url,
-    last_key,
-    volume_key,
-    ask_key,
-    bid_key,
-    chek
-  );
+  let dnow, last, volume, ask, bid;
+  try
+  {
+    [dnow, last, volume, ask, bid] = await Get_currency_ticker_WEB(
+      currency_id,
+      exchange_id,
+      ticker_name,
+      url,
+      last_key,
+      volume_key,
+      ask_key,
+      bid_key,
+      chek
+    );
+  }  
+  catch(e)
+  {
+
+    //console.log("error in Get_currency_ticker_WEB");
+    return  Error("error in Get_currency_ticker_WEB",ticker_name);
+  }
+  console.log(moment().format("YYYY-MM-DD HH:mm:ss") + " ok");
+
 
   /*
     let last = get(res, "body.ticker.last");
@@ -387,7 +416,7 @@ async function Pull_currensy_ticker(connection, currencies_tickers_conf_id) {
   Inset_currency_ticker_DB();
 }
 async function Inset_currency_ticker_DB(dnow, last, volume, ask, bid) {
-  console.log("get start insert");
+  console.log(moment().format("YYYY-MM-DD HH:mm:ss") + " get start insert"+ticker_name);
 }
 
 async function Get_currency_ticker_WEB(
@@ -402,16 +431,14 @@ async function Get_currency_ticker_WEB(
   chek
 ) {
   let res = {};
-  let dnow = moment().format("YYYY-MM-DD HH:mm:ss");
-  //let url = "https://graviex.net//api/v2/tickers/protonbtc.json";
-  try {
-    //var restp = await asyncgetJSON(url);
+  let dnow = moment().format("YYYY-MM-DD HH:mm:ss");  
+  try {   
     res = await phin({
       url: url,
       parse: "json"
     });
   } catch (e) {
-    return Error("cannot get data frome web ", url, e);
+    return Error("cannot get data frome web ", url + e);
   }
   let last = get(res, last_key);
   let volume = 0;
@@ -421,7 +448,20 @@ async function Get_currency_ticker_WEB(
   let bid = 0;
   if (bid_key) bid = get(res, bid_key);
   if (chek) {
-    console.log("проверка не реализована");
+    let chekExpresson  = chek.split("=");    
+    if (get(res,chekExpresson[0] )!=chekExpresson[1])
+    {
+      console.log("все плохо");
+      console.log(get(res,chekExpresson[0] ));
+      console.log(chekExpresson[1]);
+      return Error("wrong config to get data frome web - check failed ", get(res,chekExpresson[0])+"!="+ chekExpresson[1]);
+    }
+    console.log("все хорошо");
+    console.log(get(res,chekExpresson[0] ));
+    console.log(chekExpresson[1]);
+    console.log("dfdfdf");
+
+
   }
   console.log(dnow, last, volume, ask, bid);
   return [dnow, last, volume, ask, bid];
