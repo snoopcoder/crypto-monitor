@@ -33,11 +33,6 @@ https.globalAgent.options.ca = rootCas;
 var config = require("./config.json");
 
 
-
-
-//test(Done);
-getTiker(1,Done);
-
 var client = new zabbixNode(
   "http://zbxs.e5-nsk.ru/api_jsonrpc.php",
   "script",
@@ -328,17 +323,17 @@ async function getTiker (cb,id) {
 
 const start = async () => {
   // do something
-  let connection;
-  DBconnect(this.connection);
+  let connection  =  await  DBconnect(Done,this.connection);
   if (!connection){
-    console.log('ca')
+    console.log('DBconnect error, exit')
+    return;
   }
-
+  console.log('ca')
 }
 
 
 
-async function DBconnect(connection)
+async function DBconnect(cb,connection)
 {  
   try {
     connection = await mysql.createConnection({
@@ -349,9 +344,14 @@ async function DBconnect(connection)
     });
   } catch (e) {
     return cb(
-      "Unexpected error occurred in createConnection during writeData processing - ",
+      "Unexpected error occurred in createConnection during DBconnect processing - ",
       e.message
     );
   }
+  return connection;
 
 }
+
+//test(Done);
+start();
+//getTiker(1,Done);
