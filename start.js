@@ -54,7 +54,9 @@ client.call('host.get', {'hostids': hostid}, function(error, resp, body) {
 
 function Error(err, Data) {
   if (err) {
-    console.log(moment().format("YYYY-MM-DD HH:mm:ss") + " " + err + " " + Data);
+    console.log(
+      moment().format("YYYY-MM-DD HH:mm:ss") + " " + err + " " + Data
+    );
     return 0;
   }
   //else console.log(Data);
@@ -298,59 +300,36 @@ async function getTiker(cb, id) {
 
 async function start() {
   // do something
+
+  //первый запуск при инициализации
+  Task5min();
+  //Task60min(connection);
+  //Task24h(connection); но тут лучше наверное переделать на расписание по времени или вобще все переделать ан расписание. чтоб и 5 мин таймер запусался в кратное время. и часовой
+
+  //Запуск функции шедулера
+  //
+  // начать повторы с интервалом 5мин
+  var timerId = setInterval(() => {
+    Task5min();
+  }, 300000);
+}
+
+async function Task5min() {
   let connection = await DBconnect();
   if (!connection) {
     console.log("DBconnect error -cannot connect to DB, exit");
     return;
   }
 
-  //первый запуск при инициализации
-  Task5min(connection);
-  //Task60min(connection);
-  //Task24h(connection); но тут лучше наверное переделать на расписание по времени или вобще все переделать ан расписание. чтоб и 5 мин таймер запусался в кратное время. и часовой
-
-
-  //Запуск функции шедулера
-  //
-  // начать повторы с интервалом 5мин
-  var timerId = setInterval(() => {
-    Task5min(connection);
-  }, 300000);
-}
-
-async function Task5min(connection) {
   //получить список всех валют указаных в проверке 5 мин и запусить их проверку через цикл
   let currencies_tickers_conf_List = await Get_currencies_tickers_conf_List(
     connection
   );
-  Pull_currencies_tickers(connection, currencies_tickers_conf_List);
+  await Pull_currencies_tickers(connection, currencies_tickers_conf_List);
   //Pull_pools_grubeddata(connection, pools_grubeddata_conf_List)
-
-
-
+  connection.end();
+  console.log("-------------------------");
   //await sleep();
-
-  //connection;
-  //.execute("SELECT * FROM currencies_tickers_conf WHERE id = ?", [5])
-  let [configs, fields] = await connection.query(
-    "SELECT  id FROM currencies_tickers_conf"
-  );
-  for (let config of configs) {
-  }
-
-  /*
-  let [rows, fields] = await connection.query(
-    "SELECT * FROM currencies_tickers_conf WHERE id = ?",
-    [3]
-  );*/
-/*
-  let sheduler5min = [5];
-  for (let id of sheduler5min) {
-    //getData(id, Error);
-  }
-*/
-  //получить список всех пулов указаных в проверке 5 мин и запусить их проверку через цикл
-  //
 }
 
 //---- test for
@@ -361,18 +340,9 @@ async function sleep() {
   await timeout(60000);
 }
 //----
-let currency_id,
-exchange_id,
-ticker_name,
-url,
-last_key,
-volume_key,
-ask_key,
-bid_key,
-chek;
+
 async function Pull_currensy_ticker(connection, currencies_tickers_conf_id) {
-  //console.log("start debug Pull_currensy_ticker");
-  [
+  let [
     currency_id,
     exchange_id,
     ticker_name,
@@ -383,9 +353,9 @@ async function Pull_currensy_ticker(connection, currencies_tickers_conf_id) {
     bid_key,
     chek
   ] = await Get_currency_ticker_options(connection, currencies_tickers_conf_id);
+
   let dnow, last, volume, ask, bid;
-  try
-  {
+  try {
     [dnow, last, volume, ask, bid] = await Get_currency_ticker_WEB(
       currency_id,
       exchange_id,
@@ -397,15 +367,11 @@ async function Pull_currensy_ticker(connection, currencies_tickers_conf_id) {
       bid_key,
       chek
     );
-  }  
-  catch(e)
-  {
-
+  } catch (e) {
     //console.log("error in Get_currency_ticker_WEB");
-    return  Error("error in Get_currency_ticker_WEB",ticker_name);
+    return Error("error in Get_currency_ticker_WEB", ticker_name);
   }
   console.log(moment().format("YYYY-MM-DD HH:mm:ss") + " ok");
-
 
   /*
     let last = get(res, "body.ticker.last");
@@ -413,10 +379,51 @@ async function Pull_currensy_ticker(connection, currencies_tickers_conf_id) {
     let ask = get(res, "body.ticker.sell");
     let bid = get(res, "body.ticker.buy");
     */
-  Inset_currency_ticker_DB();
+  Inset_currency_ticker_DB(
+    connection,
+    dnow,
+    last,
+    volume,
+    ask,
+    bid,
+    currencies_tickers_conf_id
+  );
 }
-async function Inset_currency_ticker_DB(dnow, last, volume, ask, bid) {
-  console.log(moment().format("YYYY-MM-DD HH:mm:ss") + " get start insert"+ticker_name);
+async function Inset_currency_ticker_DB(
+  connection,
+  dnow,
+  last,
+  volume,
+  ask,
+  bid,
+  currencies_tickers_conf_id
+) {
+  console.log(
+    moment().format("YYYY-MM-DD HH:mm:ss") +
+      " get start insert " +
+      currencies_tickers_conf_id +
+      " last = " +
+      last +
+      "BTC"
+  );
+  try {
+    await connection.execute(
+      dedent`
+    INSERT INTO  currencies_tickers SET 
+    on_date=?, 
+    conf_id=?,
+    last=?,
+    volume=?,
+    ask=?,
+    bid=?`,
+      [dnow, currencies_tickers_conf_id, last, volume, ask, bid]
+    );
+  } catch (e) {
+    return Error(
+      "Unexpected error occurred in INSERT during writeData processing -",
+      e.message
+    );
+  }
 }
 
 async function Get_currency_ticker_WEB(
@@ -431,14 +438,29 @@ async function Get_currency_ticker_WEB(
   chek
 ) {
   let res = {};
-  let dnow = moment().format("YYYY-MM-DD HH:mm:ss");  
-  try {   
+  let dnow = moment().format("YYYY-MM-DD HH:mm:ss");
+  try {
     res = await phin({
       url: url,
       parse: "json"
     });
   } catch (e) {
     return Error("cannot get data frome web ", url + e);
+  }
+  if (chek) {
+    [
+      last_key,
+      volume_key,
+      ask_key,
+      bid_key
+    ] = await Fix_currency_ticker_options(
+      res,
+      last_key,
+      volume_key,
+      ask_key,
+      bid_key,
+      chek
+    );
   }
   let last = get(res, last_key);
   let volume = 0;
@@ -447,24 +469,42 @@ async function Get_currency_ticker_WEB(
   if (ask_key) ask = get(res, ask_key);
   let bid = 0;
   if (bid_key) bid = get(res, bid_key);
-  if (chek) {
-    let chekExpresson  = chek.split("=");    
-    if (get(res,chekExpresson[0] )!=chekExpresson[1])
-    {
-      console.log("все плохо");
-      console.log(get(res,chekExpresson[0] ));
-      console.log(chekExpresson[1]);
-      return Error("wrong config to get data frome web - check failed ", get(res,chekExpresson[0])+"!="+ chekExpresson[1]);
-    }
-    console.log("все хорошо");
-    console.log(get(res,chekExpresson[0] ));
-    console.log(chekExpresson[1]);
-    console.log("dfdfdf");
-
-
-  }
   console.log(dnow, last, volume, ask, bid);
+  //dnow, last, volume, ask, bid
   return [dnow, last, volume, ask, bid];
+}
+
+async function Fix_currency_ticker_options(
+  res,
+  last_key,
+  volume_key,
+  ask_key,
+  bid_key,
+  chek
+) {
+  // fixkey
+  let chekExpresson = chek.split("=");
+  //проверить что res это массив
+
+  //if (Array.isArray(res.body)) console.log("пришел массив");
+
+  //проверить что длина res больше единицы
+  //if (res.body.length > 1) console.log("длина массива больше 1");
+  //пробежаться найти нужный индекс
+  let id;
+  for (let i = 0; i < res.body.length; i++) {
+    //console.log(get(res.body[i], chekExpresson[0]) + " " + chekExpresson[1]); // res.body[i].id="ULT_BTC")
+    if (get(res.body[i], chekExpresson[0]) == chekExpresson[1]) {
+      id = i;
+      break;
+    }
+  }
+  //скоректировать все маски
+  last_key = last_key.replace("$", id);
+  volume_key = volume_key.replace("$", id);
+  ask_key = ask_key.replace("$", id);
+  bid_key = bid_key.replace("$", id);
+  return [last_key, volume_key, ask_key, bid_key];
 }
 
 async function Get_currency_ticker_options(
@@ -500,21 +540,34 @@ async function Get_currency_ticker_options(
   ];
 }
 
-function Pull_currencies_tickers(
+async function Pull_currencies_tickers(
   connection,
   currencies_tickers_conf_List_Array
 ) {
+  let calls = [];
   for (let currencies_tickers_conf_id of currencies_tickers_conf_List_Array) {
-    Pull_currensy_ticker(connection, currencies_tickers_conf_id);
+    //Pull_currensy_ticker при вызове вызращает промис, который мы пушим в масси, который потом уже передадим в Promise.all который вернем нам общий промис и уже завершениия его мы дождемся через await
+    calls.push(Pull_currensy_ticker(connection, currencies_tickers_conf_id));
+    //return calls;
   }
+
+  await Promise.all(calls);
 }
 
 //currencies_tickers_conf
 async function Get_currencies_tickers_conf_List(connection) {
   //try   todo
-  let [currencies_tickers_conf_List, fields] = await connection.query(
-    "SELECT * FROM sheduler5min"
-  );
+  let currencies_tickers_conf_List, fields;
+  try {
+    [currencies_tickers_conf_List, fields] = await connection.query(
+      "SELECT * FROM sheduler5min"
+    );
+  } catch (e) {
+    return Error(
+      "error select from DB in  Get_currencies_tickers_conf_List",
+      e
+    );
+  }
   let currencies_tickers_conf_List_Array = [];
   for (let currencies_ticker of currencies_tickers_conf_List) {
     currencies_tickers_conf_List_Array.push(
@@ -523,8 +576,6 @@ async function Get_currencies_tickers_conf_List(connection) {
   }
   return currencies_tickers_conf_List_Array;
 }
-
-async function getCurrenses(connection, currensysArray) {}
 
 async function DBconnect() {
   let connection;
