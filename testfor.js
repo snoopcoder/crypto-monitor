@@ -1,6 +1,17 @@
 const phin = require("phin").promisified;
 var mysql = require("mysql2/promise");
+var config = require("./config.json");
 
+function Error(err, Data) {
+  if (err) {
+    console.log(
+      moment().format("YYYY-MM-DD HH:mm:ss") + " " + err + " " + Data
+    );
+    return 0;
+  }
+  //else console.log(Data);
+  //return Data;
+}
 function FixAlgo(algo) {
   let tempAlgo = algo.split("-");
   if (tempAlgo.length == 2) algo = tempAlgo[0];
@@ -18,9 +29,14 @@ let urls = [
   "http://angrypool.com/api/currencies",
   "http://api.bsod.pw/api/currencies"
 ];
-PullPoolsStats();
 
-let connection = DBconnect();
+Start();
+
+
+async function Start() {
+let connection =  await DBconnect();
+PullPoolsStats(connection);
+}
 
 /*
 INSERT INTO  pools SET name="hash4.life", url="https://hash4.life/api/currencies", coins_count=1;
@@ -35,8 +51,28 @@ INSERT INTO  pools SET name="bsod.pw", url="http://api.bsod.pw/api/currencies", 
 
 */
 
-async function PullPoolsStats() {
-  for (let i = 0; i < urls.length; i++) GetPoolStat(urls[i]);
+async function PullPoolsStats(connection) {
+  let pools_array;
+  try {
+    [pools_array,fields] = await connection.execute(
+      "SELECT * FROM pools"
+    );
+  } catch (e) {
+    return Error(
+      "error select from DB in  Get_currencies_tickers_conf_List",
+      e
+    );
+  }
+  let currencies_tickers_conf_List_Array = [];
+  for (let i =0; i < pools_array.length; i++) {
+    PullPoolStat(pools_array[i].id,pools_array[i].url);    
+  }  
+
+  //for (let i = 0; i < urls.length; i++) GetPoolStat(urls[i]);
+}
+
+async function PullPoolStat (pool_id,url){
+  console.log(pool_id,url);
 }
 
 async function GetPoolStat(url) {
@@ -73,6 +109,28 @@ async function GetPoolStat(url) {
   }
 }
 
+async function Get_pool_stat_WEB(connection,pool_id){
+  let ;
+  try {
+    [currencies_tickers_conf_List, fields] = await connection.query(
+      "SELECT * FROM sheduler5min"
+    );
+  } catch (e) {
+    return Error(
+      "error select from DB in  Get_currencies_tickers_conf_List",
+      e
+    );
+  }
+  let currencies_tickers_conf_List_Array = [];
+  for (let currencies_ticker of currencies_tickers_conf_List) {
+    currencies_tickers_conf_List_Array.push(
+      currencies_ticker.currencies_tickers_conf_id
+    );
+  }
+  return currencies_tickers_conf_List_Array;
+  
+
+}
 //
 //Забрать данные с пула
 //распарсить
