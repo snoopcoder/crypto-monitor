@@ -379,7 +379,7 @@ async function Pull_currensy_ticker(connection, currencies_tickers_conf_id) {
     let ask = get(res, "body.ticker.sell");
     let bid = get(res, "body.ticker.buy");
     */
-  Inset_currency_ticker_DB(
+  await Inset_currency_ticker_DB(
     connection,
     dnow,
     last,
