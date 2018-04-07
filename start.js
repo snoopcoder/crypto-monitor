@@ -8,7 +8,6 @@ const dedent = require("dedent");
 var moment = require("moment");
 const phin = require("phin").promisified;
 var get = require("lodash.get");
-
 const https = require("https");
 /*------<fix>-----------------------
 не забирает данные с сайтов с косяным сертификатом. в возникшей ошибке причина -не включен премежуточный сертификат в файл сертификата полученного с сервера
@@ -27,6 +26,8 @@ let outs = rootCas.addFile(
 https.globalAgent.options.ca = rootCas;
 //------</fix>-----------------------
 
+//----
+const poolsgraber = require("./PoolsGrab");
 // Подключение конфига
 var config = require("./config.json");
 
@@ -325,10 +326,11 @@ async function Task5min() {
   let currencies_tickers_conf_List = await Get_currencies_tickers_conf_List(
     connection
   );
-  await Pull_currencies_tickers(connection, currencies_tickers_conf_List);
+  //await Pull_currencies_tickers(connection, currencies_tickers_conf_List);
+  await poolsgraber.PullPoolsStats(connection);
   //Pull_pools_grubeddata(connection, pools_grubeddata_conf_List)
   connection.end();
-  console.log("-------------------------");
+  console.log(moment().format("YYYY-MM-DD HH:mm:ss"), "выполнено");
   //await sleep();
 }
 
@@ -371,8 +373,6 @@ async function Pull_currensy_ticker(connection, currencies_tickers_conf_id) {
     //console.log("error in Get_currency_ticker_WEB");
     return Error("error in Get_currency_ticker_WEB", ticker_name);
   }
-  console.log(moment().format("YYYY-MM-DD HH:mm:ss") + " ok");
-
   /*
     let last = get(res, "body.ticker.last");
     let volume = get(res, "body.ticker.volbtc");
@@ -398,14 +398,6 @@ async function Inset_currency_ticker_DB(
   bid,
   currencies_tickers_conf_id
 ) {
-  console.log(
-    moment().format("YYYY-MM-DD HH:mm:ss") +
-      " get start insert " +
-      currencies_tickers_conf_id +
-      " last = " +
-      last +
-      "BTC"
-  );
   try {
     await connection.execute(
       dedent`
@@ -469,7 +461,6 @@ async function Get_currency_ticker_WEB(
   if (ask_key) ask = get(res, ask_key);
   let bid = 0;
   if (bid_key) bid = get(res, bid_key);
-  console.log(dnow, last, volume, ask, bid);
   //dnow, last, volume, ask, bid
   return [dnow, last, volume, ask, bid];
 }
