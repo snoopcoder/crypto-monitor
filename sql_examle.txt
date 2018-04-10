@@ -1,0 +1,2 @@
+select * from pools_currencies_stats_conf  join currencies join pools join algos on pools_currencies_stats_conf.currencies_id=currencies.id and pools_currencies_stats_conf.pool_id=pools.id and pools_currencies_stats_conf.algo_id=algos.id
+where currencies.name like "%MAGI%" or currencies.name like "%DIGITAL%" or currencies.name like "%ETERNITY%";

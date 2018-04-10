@@ -282,4 +282,28 @@ let pool;
 return pool[0].coins_count;
 }
 
-module.exports.PullPoolsStats = PullPoolsStats;
+
+async function start() {
+  let connection = DBconnect();
+
+    
+}
+
+
+async function DBconnect() {
+    let connection;
+    try {
+      connection = await mysql.createConnection({
+        host: config.sql.host,
+        user: config.sql.user,
+        password: config.sql.password,
+        database: config.sql.database
+      });
+    } catch (e) {
+      return 0;
+    }
+    return connection;
+  }
+
+
+start()

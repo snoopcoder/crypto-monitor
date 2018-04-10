@@ -28,6 +28,7 @@ http://api.bsod.pw/api/currencies	bsod.pw
 */
 let AllAlgo = [];
 let ALLCurrencies = [];
+/*
 let workArray = [
   "https://hash4.life/api/currencies",
   "https://hashfaster.com/api/currencies",
@@ -37,6 +38,10 @@ let workArray = [
   "http://api.zergpool.com:8080/api/currencies",
   "http://angrypool.com/api/currencies",
   "http://api.bsod.pw/api/currencies"
+];
+*/
+let workArray = [
+  "http://api.zergpool.com:8080/api/currencies"  
 ];
 start();
 
@@ -85,13 +90,16 @@ async function start() {
 async function Pase(connection, url, json, i, pool_id) {
   console.log("----------------------------------------------");
   console.log(i, ") Proccessing for " + url);
+  let count =0;
   for (let item in json) {
-    console.log(json[item].name, json[item].algo);
+    console.log("name:"+ json[item].name +" algo:" + json[item].algo +" workers:"+json[item].workers);
+    if (json[item].workers>0) count++;
     if (chkAlgo(FixAlgo(json[item].algo)))
       AllAlgo.push(FixAlgo(json[item].algo));
     if (chkCurr(FixCURR(json[item].name)))
       ALLCurrencies.push(FixCURR(json[item].name));
   }
+  console.log("worker >0 count:" + count);
   console.log("add to config:");
 
   for (let item in json) {
@@ -107,6 +115,11 @@ async function Pase(connection, url, json, i, pool_id) {
     } catch (e) {
       return Error("error select id from currencies", e);
     }
+    if (cur_id.length==0)
+    {
+      console.log("Curr name not found! fixet name:" +CurrPoolSymbolText + ", not fixed:" +json[item].name);
+      continue
+    }
     cur_id = cur_id[0].id;
     //получить id алгоритма
     let algo_id;
@@ -117,6 +130,11 @@ async function Pase(connection, url, json, i, pool_id) {
       );
     } catch (e) {
       return Error("error select id from algos", e);
+    }
+    if (algo_id.length==0)
+    {
+      console.log("Algo id not found! fixet algo:" +algoText + ", not fixed:" +json[item].algo);
+      continue
     }
     algo_id = algo_id[0].id;
     let query =
@@ -142,9 +160,12 @@ function chkCurr(currency) {
 }
 
 function FixAlgo(algo) {
-  let tempAlgo = algo.split("-");
-  if (tempAlgo.length == 2) algo = tempAlgo[0];
   if (algo == "phi1612") algo = "phi";
+  else if ((algo == "myr-gr")) algo = algo;
+  else {
+    let tempAlgo = algo.split("-");
+    if (tempAlgo.length == 2) algo = tempAlgo[0];
+  }
   return algo;
 }
 
