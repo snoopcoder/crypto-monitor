@@ -3,9 +3,8 @@ var mysql = require("mysql2/promise");
 var moment = require("moment");
 const dedent = require("dedent");
 
-const fix = require("./fix");
-const error = require("./error");
-var config = require("./config.json");
+const fix = require("../fix");
+var config = require("../config.json");
 
 function Error(err, Data) {
   if (err) {
@@ -33,7 +32,7 @@ INSERT INTO  pools SET name="bsod.pw", url="http://api.bsod.pw/api/currencies", 
 
 */
 
-async function PullPoolsStats(connection) {
+async function PoolsProccess(connection) {
   let pools_array;
   try {
     [pools_array, fields] = await connection.execute("SELECT * FROM pools");
@@ -43,36 +42,31 @@ async function PullPoolsStats(connection) {
       e
     );
   }
-  
+  /*
   let stub = [];
   stub.push(pools_array[5]);
   pools_array = stub;
-  
-  let calls = [];
+  */
+
   for (let i = 0; i < pools_array.length; i++) {
-    calls.push(PullPoolStat(connection, pools_array[i].id, pools_array[i].url));
+    let pool_api_data = await Get_pool_stat_WEB(connection, pools_array[i].url);
+    if (pool_api_data == 0) continue;
+    console.log("----------------------------------");
+    console.log(pools_array[i].name);
+    await ChekConf(connection, pools_array[i].id, pool_api_data);
+    await ChekPoolData(connection, pools_array[i].id, pool_api_data);
   }
-  await Promise.all(calls);
 }
 
-async function PullPoolStat(connection, pool_id, url) {
-
-  
-  let pool_api_data = await Get_pool_stat_WEB(connection, url);  
-
-  
-
-  //console.log(pool_api_data);
-  //подсчитать количество монет и сравнить с тем что есть в конфиге пула, уведомить если листинг изменился для принятия решения
-  //chekPoolData(pool_api_data);
-
-  //получить наблюдаемые валюты из базы
+async function ChekConf(connection, pool_id, pool_api_data) {
   let curries_conf_checklist = await get_Pool_curries_conf_checklist(
     connection,
     pool_id
   );
-  let curr_count;
   let SomeCurrDisabledOnPool = false;
+  let errormess = "[err] Монета из конфига на нейдена в данных с пула:";
+  let fixmess = "[fix]";
+
   for (let conf of curries_conf_checklist) {
     //поиск идет по имени и алгоритму находим их значения в текстовом виде
     let algo = await GetAlgoSymbol(connection, conf.algo_id);
@@ -80,111 +74,136 @@ async function PullPoolStat(connection, pool_id, url) {
       connection,
       conf.currencies_id
     );
-    let dnow = moment().format("YYYY-MM-DD HH:mm:ss");
-    let workers, hashrate, h24_blocks;
 
     let gotit = false;
-    curr_count =0;
-    let pool_atem_array =[];
-    let pool_atem = {};
-    let resName,resAlgo;
     for (let item in pool_api_data) {
-      curr_count++;      
       if (
         fix.FixAlgo(pool_api_data[item].algo) == algo &&
         fix.FixCURR(pool_api_data[item].name) == CurrencyPoolSymbol
       ) {
+        gotit = true;
+        break;
+      }
+    }
+    if (!gotit) {
+      SomeCurrDisabledOnPool = true; // только чтобы вывести что конфиг в порядке
+      errormess += "\n      name:" + CurrencyPoolSymbol + " algo:" + algo;
+      fixmess +=
+        "\n      UPDATE pools_currencies_stats_conf SET enable_monitoring=0 WHERE id=" +
+        conf.id +
+        ";";
+    }
+  }
+  if (!SomeCurrDisabledOnPool)
+    console.log("[ok] Для всех монет в конфиге есть данные");
+  else {
+    console.log(errormess);
+    console.log(fixmess);
+  }
+}
+
+async function ChekPoolData(connection, pool_id, pool_api_data) {
+  let SomeCurrDisabledOnPool = false;
+  let config_chek_list;
+  try {
+    [config_chek_list, fields] = await connection.execute(
+      "SELECT currencies.pool_simbol as CurrencyPoolSymbol, algos.symbol as AlgoSymbol, pools_currencies_stats_conf.id as ConfID FROM pools_currencies_stats_conf join currencies join algos on pools_currencies_stats_conf.currencies_id=currencies.id and pools_currencies_stats_conf.algo_id=algos.id   WHERE pool_id=?;",
+      [pool_id]
+    );
+  } catch (e) {
+    return Error("error select from DB in  GetPoolCurrsCount", e);
+  }
+  let errormess = "[err] Данные на пуле не отражены в конфиге:";
+  let fixmess = "[fix]";
+  for (let item in pool_api_data) {
+    let FixedPoolAlgo = fix.FixAlgo(pool_api_data[item].algo);
+    let FixedPoolCurName = fix.FixCURR(pool_api_data[item].name);
+    let gotit = false;
+    for (let conf of config_chek_list) {
+      //поиск идет по имени и алгоритму находим их значения в текстовом виде
+      let algo = conf.AlgoSymbol;
+      let CurrencyPoolSymbol = conf.CurrencyPoolSymbol;
+
+      if (FixedPoolAlgo == algo && FixedPoolCurName == CurrencyPoolSymbol) {
         //console.log(pool_api_data[item].workers);
         gotit = true;
-        workers = pool_api_data[item].workers;
-        hashrate = pool_api_data[item].hashrate;
-        h24_blocks = pool_api_data[item]["24h_blocks"];
+        break;
       }
     }
 
-    //проверочка вдруг монету делистнули с пула
     if (!gotit) {
-      SomeCurrDisabledOnPool = true;
-      error.WriteSQL(
-        "config not found in new data" + " " + url + " name:" + CurrencyPoolSymbol + " algo:" + algo +" #" ,
-        "error"
-      );
-      continue ;
-    }
+      SomeCurrDisabledOnPool = true; // только чтобы вывести что конфиг в порядке
+      errormess +=
+        "\n      name:" + FixedPoolCurName + " algo:" + FixedPoolAlgo;
 
-    await Insert_pools_currencies_stats_DB(
-      connection,
-      dnow,
-      conf.id,
-      workers,
-      hashrate,
-      h24_blocks
-    );
+      // проверить есть ли алго, если нет до добавить но основной запрос на добавление монеты не сформируется
+      let algo_id = await GetAlgoID(connection, FixedPoolAlgo);
+      if (!algo_id) {
+        fixmess +=
+          "\n      INSERT algos SET symbol='" +
+          FixedPoolAlgo +
+          "',name='" +
+          FixedPoolCurName +
+          "'; -- запрос на добавление конфига не сформирован так как отсутвует алгоритм в базе - необходимо запустить весь скип занова после добавление алгорима в базу этим запросом";
+        continue;
+      }
+      //провертить есть ли монета, если нет до добавить
+      let curr_id = await GetCurrID(connection, FixedPoolCurName);
+      if (!curr_id) {
+        fixmess +=
+          "\n      INSERT currencies SET symbol='" +
+          FixedPoolCurName +
+          "',name='" +
+          FixedPoolCurName +
+          "',pool_simbol='" +
+          FixedPoolCurName +
+          "'; -- запрос на добавление конфига не сформирован так как отсутвует монета в базе - необходимо запустить весь скип занова после добавление монеты в базу этим запросом";
+        continue;
+      }
 
-    //для каждой валюты получить новые данные и занести в базу
-    //если найдены в наборе нужные данные то внести их базу
-    //if (1 == 1) Inset_pool_currency_stats();
-  }
-  if ((curr_count!=GetPoolCurrsCount(connection,pool_id))||(SomeCurrDisabledOnPool))
-  {
-    await PullInfoForPool(connection,pool_api_data,curr_count,pool_id);
-  }
-}
-
-async function PullInfoForPool(connection,pool_api_data,curr_count,pool_id){
-  let dnow = moment().format("YYYY-MM-DD HH:mm:ss");;
-  let i = 0;
-  for (let item in pool_api_data)
-  {
-    i++
-    try {
-      await connection.execute(
-        dedent`
-      INSERT INTO  pools_currencies_lists SET 
-      on_date=?, 
-      curr_name_on_pool_txt=?,
-      algo_name_on_pool_txt=?,
-      comment=?,
-      pool_id=?      
-      `,
-        [dnow, pool_api_data[item].name, pool_api_data[item].algo, "["+i+"/"+curr_count+"]", pool_id]
-      );
-    } catch (e) {
-      return error.WriteSQL(
-        "Unexpected error occurred in INSERT during writeData PullInfoForPool processing -",
-        e.message
-      );
+      fixmess +=
+        "\n      INSERT pools_currencies_stats_conf SET pool_id=" +
+        pool_id +
+        ", algo_id='" +
+        algo_id +
+        "',currencies_id='" +
+        curr_id +
+        "',enable_monitoring=1;";
     }
   }
 
+  if (!SomeCurrDisabledOnPool)
+    console.log("[ok] Все данные пула отражены в конфиге");
+  else {
+    console.log(errormess);
+    console.log(fixmess);
+  }
 }
 
-async function Insert_pools_currencies_stats_DB(
-  connection,
-  dnow,
-  conf_id,
-  workers,
-  hashrate,
-  h24_blocks
-) {
+async function GetCurrID(connection, AlgoSymbol) {
+  let id;
   try {
-    await connection.execute(
-      dedent`
-    INSERT INTO  pools_currencies_stats SET 
-    on_date=?, 
-    conf_id=?,
-    workers=?,
-    hashrate=?,
-    24h_blocks=?
-    `,
-      [dnow, conf_id, workers, hashrate, h24_blocks]
+    [id, fields] = await connection.execute(
+      "SELECT id FROM currencies WHERE symbol like ?",
+      [AlgoSymbol]
     );
   } catch (e) {
-    return Error(
-      "Unexpected error occurred in INSERT during writeData pools_currencies_stats processing -",
-      e.message
-    );
+    return Error("error select from DB in GetAlgoSymbol", e);
   }
+  if (id.length == 1) return id[0].id;
+  return 0;
+}
+async function GetAlgoID(connection, AlgoSymbol) {
+  let id;
+  try {
+    [id, fields] = await connection.execute(
+      "SELECT id FROM algos WHERE symbol like ?",
+      [AlgoSymbol]
+    );
+  } catch (e) {
+    return Error("error select from DB in GetAlgoSymbol", e);
+  }
+  return id[0].id;
 }
 
 async function GetAlgoSymbol(connection, algo_id) {
@@ -216,7 +235,7 @@ async function get_Pool_curries_conf_checklist(connection, pool_id) {
   let conf_id_array;
   try {
     [conf_id_array, fields] = await connection.execute(
-      "SELECT * FROM pools_currencies_stats_conf WHERE pool_id=?",
+      "SELECT * FROM pools_currencies_stats_conf WHERE pool_id=? and enable_monitoring=1",
       [pool_id]
     );
   } catch (e) {
@@ -238,11 +257,6 @@ async function Get_pool_stat_WEB(connection, url) {
   }
   return res.body;
 }
-//
-//Забрать данные с пула
-//распарсить
-//записать в таблицу пулов количество монет на пуле (контролировать изменение)
-//записать данные в том числе если появились новые алгоритмы
 
 async function DBconnect() {
   let connection;
@@ -259,51 +273,38 @@ async function DBconnect() {
   return connection;
 }
 
-/*
-async function Start() {
-  let connection = await DBconnect();
-  await PullPoolsStats(connection);
-
-  connection.end();
-}
-*/
-
-async function GetPoolCurrsCount(connection,pool_id)
-{
-let pool;
+async function GetPoolCurrsCount(connection, pool_id) {
+  let pool;
   try {
-    [pool, fields] = await connection.execute("SELECT * FROM pools WHERE id=?",[pool_id]);
-  } catch (e) {
-    return Error(
-      "error select from DB in  GetPoolCurrsCount",
-      e
+    [pool, fields] = await connection.execute(
+      "SELECT * FROM pools WHERE id=?",
+      [pool_id]
     );
+  } catch (e) {
+    return Error("error select from DB in  GetPoolCurrsCount", e);
   }
-return pool[0].coins_count;
+  return pool[0].coins_count;
 }
-
 
 async function start() {
-  let connection = DBconnect();
-
-    
+  let connection = await DBconnect();
+  await PoolsProccess(connection);
+  connection.end();
 }
 
-
 async function DBconnect() {
-    let connection;
-    try {
-      connection = await mysql.createConnection({
-        host: config.sql.host,
-        user: config.sql.user,
-        password: config.sql.password,
-        database: config.sql.database
-      });
-    } catch (e) {
-      return 0;
-    }
-    return connection;
+  let connection;
+  try {
+    connection = await mysql.createConnection({
+      host: config.sql.host,
+      user: config.sql.user,
+      password: config.sql.password,
+      database: config.sql.database
+    });
+  } catch (e) {
+    return 0;
   }
+  return connection;
+}
 
-
-start()
+start();

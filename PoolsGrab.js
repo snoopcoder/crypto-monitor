@@ -43,11 +43,11 @@ async function PullPoolsStats(connection) {
       e
     );
   }
-  
+  /*
   let stub = [];
   stub.push(pools_array[5]);
   pools_array = stub;
-  
+*/
   let calls = [];
   for (let i = 0; i < pools_array.length; i++) {
     calls.push(PullPoolStat(connection, pools_array[i].id, pools_array[i].url));
@@ -56,11 +56,7 @@ async function PullPoolsStats(connection) {
 }
 
 async function PullPoolStat(connection, pool_id, url) {
-
-  
-  let pool_api_data = await Get_pool_stat_WEB(connection, url);  
-
-  
+  let pool_api_data = await Get_pool_stat_WEB(connection, url);
 
   //console.log(pool_api_data);
   //подсчитать количество монет и сравнить с тем что есть в конфиге пула, уведомить если листинг изменился для принятия решения
@@ -84,12 +80,12 @@ async function PullPoolStat(connection, pool_id, url) {
     let workers, hashrate, h24_blocks;
 
     let gotit = false;
-    curr_count =0;
-    let pool_atem_array =[];
+    curr_count = 0;
+    let pool_atem_array = [];
     let pool_atem = {};
-    let resName,resAlgo;
+    let resName, resAlgo;
     for (let item in pool_api_data) {
-      curr_count++;      
+      curr_count++;
       if (
         fix.FixAlgo(pool_api_data[item].algo) == algo &&
         fix.FixCURR(pool_api_data[item].name) == CurrencyPoolSymbol
@@ -106,10 +102,17 @@ async function PullPoolStat(connection, pool_id, url) {
     if (!gotit) {
       SomeCurrDisabledOnPool = true;
       error.WriteSQL(
-        "config not found in new data" + " " + url + " name:" + CurrencyPoolSymbol + " algo:" + algo +" #" ,
+        "config not found in new data" +
+          " " +
+          url +
+          " name:" +
+          CurrencyPoolSymbol +
+          " algo:" +
+          algo +
+          " #",
         "error"
       );
-      continue ;
+      continue;
     }
 
     await Insert_pools_currencies_stats_DB(
@@ -125,18 +128,19 @@ async function PullPoolStat(connection, pool_id, url) {
     //если найдены в наборе нужные данные то внести их базу
     //if (1 == 1) Inset_pool_currency_stats();
   }
-  if ((curr_count!=GetPoolCurrsCount(connection,pool_id))||(SomeCurrDisabledOnPool))
-  {
-    await PullInfoForPool(connection,pool_api_data,curr_count,pool_id);
+  if (
+    curr_count != GetPoolCurrsCount(connection, pool_id) ||
+    SomeCurrDisabledOnPool
+  ) {
+    await PullInfoForPool(connection, pool_api_data, curr_count, pool_id);
   }
 }
 
-async function PullInfoForPool(connection,pool_api_data,curr_count,pool_id){
-  let dnow = moment().format("YYYY-MM-DD HH:mm:ss");;
+async function PullInfoForPool(connection, pool_api_data, curr_count, pool_id) {
+  let dnow = moment().format("YYYY-MM-DD HH:mm:ss");
   let i = 0;
-  for (let item in pool_api_data)
-  {
-    i++
+  for (let item in pool_api_data) {
+    i++;
     try {
       await connection.execute(
         dedent`
@@ -147,7 +151,13 @@ async function PullInfoForPool(connection,pool_api_data,curr_count,pool_id){
       comment=?,
       pool_id=?      
       `,
-        [dnow, pool_api_data[item].name, pool_api_data[item].algo, "["+i+"/"+curr_count+"]", pool_id]
+        [
+          dnow,
+          pool_api_data[item].name,
+          pool_api_data[item].algo,
+          "[" + i + "/" + curr_count + "]",
+          pool_id
+        ]
       );
     } catch (e) {
       return error.WriteSQL(
@@ -156,7 +166,6 @@ async function PullInfoForPool(connection,pool_api_data,curr_count,pool_id){
       );
     }
   }
-
 }
 
 async function Insert_pools_currencies_stats_DB(
@@ -216,7 +225,7 @@ async function get_Pool_curries_conf_checklist(connection, pool_id) {
   let conf_id_array;
   try {
     [conf_id_array, fields] = await connection.execute(
-      "SELECT * FROM pools_currencies_stats_conf WHERE pool_id=?",
+      "SELECT * FROM pools_currencies_stats_conf WHERE pool_id=? and enable_monitoring=1",
       [pool_id]
     );
   } catch (e) {
@@ -268,18 +277,17 @@ async function Start() {
 }
 */
 
-async function GetPoolCurrsCount(connection,pool_id)
-{
-let pool;
+async function GetPoolCurrsCount(connection, pool_id) {
+  let pool;
   try {
-    [pool, fields] = await connection.execute("SELECT * FROM pools WHERE id=?",[pool_id]);
-  } catch (e) {
-    return Error(
-      "error select from DB in  GetPoolCurrsCount",
-      e
+    [pool, fields] = await connection.execute(
+      "SELECT * FROM pools WHERE id=?",
+      [pool_id]
     );
+  } catch (e) {
+    return Error("error select from DB in  GetPoolCurrsCount", e);
   }
-return pool[0].coins_count;
+  return pool[0].coins_count;
 }
 
 module.exports.PullPoolsStats = PullPoolsStats;

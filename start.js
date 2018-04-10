@@ -326,7 +326,7 @@ async function Task5min() {
   let currencies_tickers_conf_List = await Get_currencies_tickers_conf_List(
     connection
   );
-  //await Pull_currencies_tickers(connection, currencies_tickers_conf_List);
+  await Pull_currencies_tickers(connection, currencies_tickers_conf_List);
   await poolsgraber.PullPoolsStats(connection);
   //Pull_pools_grubeddata(connection, pools_grubeddata_conf_List)
   connection.end();
