@@ -34,7 +34,7 @@ INSERT INTO  pools SET name="bsod.pw", url="http://api.bsod.pw/api/currencies", 
 */
 
 async function PullPoolsStats(connection) {
-  let pools_array;
+  let pools_array, fields;
   try {
     [pools_array, fields] = await connection.execute("SELECT * FROM pools");
   } catch (e) {
@@ -55,9 +55,26 @@ async function PullPoolsStats(connection) {
   await Promise.all(calls);
 }
 
-async function PullPoolStat(connection, pool_id, url) {
-  let pool_api_data = await Get_pool_stat_WEB(connection, url);
+function timeout(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
+async function sleep() {
+  await timeout(60000);
+}
+
+async function PullPoolStat(connection, pool_id, url) {
+  let attempt = 0;
+  let pool_api_data;
+  // реализация повторной поппытки получить данные с пула если есть проблемы со связью
+  while (attempt < 3) {
+    pool_api_data = await Get_pool_stat_WEB(connection, url);
+    if (pool_api_data) break;
+    await timeout(4000);
+    console.log("retry Get_pool_stat_WEB for " + url);
+    attempt++;
+  }
+  if (attempt == 3) return 0;
   //console.log(pool_api_data);
   //подсчитать количество монет и сравнить с тем что есть в конфиге пула, уведомить если листинг изменился для принятия решения
   //chekPoolData(pool_api_data);
@@ -197,7 +214,7 @@ async function Insert_pools_currencies_stats_DB(
 }
 
 async function GetAlgoSymbol(connection, algo_id) {
-  let symbol;
+  let symbol, fields;
   try {
     [symbol, fields] = await connection.execute(
       "SELECT symbol FROM algos WHERE id=?",
@@ -209,7 +226,7 @@ async function GetAlgoSymbol(connection, algo_id) {
   return symbol[0].symbol;
 }
 async function GetCurrencyPoolSymbol(connection, currencies_id) {
-  let pool_simbol;
+  let pool_simbol, fields;
   try {
     [pool_simbol, fields] = await connection.execute(
       "SELECT pool_simbol FROM currencies WHERE id=?",
@@ -222,7 +239,7 @@ async function GetCurrencyPoolSymbol(connection, currencies_id) {
 }
 
 async function get_Pool_curries_conf_checklist(connection, pool_id) {
-  let conf_id_array;
+  let conf_id_array, fields;
   try {
     [conf_id_array, fields] = await connection.execute(
       "SELECT * FROM pools_currencies_stats_conf WHERE pool_id=? and enable_monitoring=1",
@@ -278,7 +295,7 @@ async function Start() {
 */
 
 async function GetPoolCurrsCount(connection, pool_id) {
-  let pool;
+  let pool, fields;
   try {
     [pool, fields] = await connection.execute(
       "SELECT * FROM pools WHERE id=?",
