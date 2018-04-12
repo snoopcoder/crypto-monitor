@@ -1,2 +1,11 @@
 select * from pools_currencies_stats_conf  join currencies join pools join algos on pools_currencies_stats_conf.currencies_id=currencies.id and pools_currencies_stats_conf.pool_id=pools.id and pools_currencies_stats_conf.algo_id=algos.id
 where currencies.name like "%MAGI%" or currencies.name like "%DIGITAL%" or currencies.name like "%ETERNITY%";
+
+
+-- select * from pools_currencies_stats_conf where pools_currencies_stats_conf.currencies_id = 7; -- 203 2 proton pool  8   (7)
+-- select * from pools_currencies_stats where pools_currencies_stats.conf_id in (select id from pools_currencies_stats_conf where pools_currencies_stats_conf.currencies_id = 7)
+-- order by conf_id;
+-- select * from pools_currencies_stats where on_date > "2018-04-12 0:0:0" and pools_currencies_stats.conf_id in (2,3);
+
+-- delete from pools_currencies_stats_conf where pools_currencies_stats_conf.pool_id = 7;
+-- delete from pools_currencies_stats where pools_currencies_stats.conf_id in (select id from pools_currencies_stats_conf where  pools_currencies_stats_conf.pool_id=7 );
