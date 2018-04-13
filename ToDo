@@ -4,7 +4,9 @@ MVC можно ли тут использовать
 переделать мотиринг зерг пула
 проверить стату с остальных пулов
 доделать отображение балансов
+
 fix
+
 error.js:25
 2018-04-12 16:03:01 config not found in new data http://api.bsod.pw/api/currencies name:EGAMING algo:scrypt # error
 error.js:11
