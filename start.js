@@ -3,7 +3,8 @@
 var moment = require("moment");
 
 const poolsgraber = require("./PoolsGrab");
-const exchangegraber = require("./ExchangeGrab");
+
+const exchangegraber = require("./ExсhangeGrab");
 const getBalans = require("./getBalance");
 
 function asyncgetJSON(url) {
