@@ -54,9 +54,9 @@ async function start() {
     console.log(
       wallet_conf.url,
       "balance:",
-      res[0],
+      res.balance,
       "balance_immature:",
-      res[1]
+      res.balance_immature
     );
   }
   //пройтись по кошелькам и забрать данные

@@ -31,11 +31,17 @@ async function WebGetData(url, op_arr, chek) {
   } catch (e) {
     return error.MyError("cannot get data frome web ", url + e);
   }
+
+  //зачем нужен chek:
+  //иногда результать будет в виде большого набора данных, массива.
+  //и для доступа к искомым данным нужен будет правильный индекс так как маска данных будет в базе со спец символом на месте индекса а поче чек будет содержать условие поиска
+  //поэтму нужно найти этот индекс  и скорректировать все маски подставив его вместо специального символа
+
   res = res.body;
   let Data = {};
-  for (let opt of op_arr) {
+  for (let opt in op_arr) {
     if (chek) opt = Fix_item_options(opt, chek);
-    Data[opt] = get(res, opt);
+    Data[opt] = get(res, op_arr[opt]);
   }
   //op_arr = await Fix_item_options(op_arr);
 
