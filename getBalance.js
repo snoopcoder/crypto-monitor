@@ -23,7 +23,6 @@ async function Get_pool_stat_WEB(connection, url) {
   return res.body;
 }
 
-start();
 async function start() {
   let myconnection = await MyworkDB.DBconnect();
   if (!myconnection) return 0;
@@ -100,3 +99,5 @@ async function Pull_currencies_tickers(
   await Promise.all(calls);
 }
 */
+
+module.exports.start = start;

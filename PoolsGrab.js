@@ -33,7 +33,13 @@ INSERT INTO  pools SET name="bsod.pw", url="http://api.bsod.pw/api/currencies", 
 
 */
 
-async function PullPoolsStats(connection) {
+async function PullPoolsStats() {
+  let connection = await DBconnect();
+  if (!connection) {
+    console.log("DBconnect error -cannot connect to DB, exit");
+    return;
+  }
+
   let pools_array, fields;
   try {
     [pools_array, fields] = await connection.execute("SELECT * FROM pools");
@@ -53,6 +59,7 @@ async function PullPoolsStats(connection) {
     calls.push(PullPoolStat(connection, pools_array[i].id, pools_array[i].url));
   }
   await Promise.all(calls);
+  connection.end();
 }
 
 function timeout(ms) {

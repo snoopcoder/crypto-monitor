@@ -127,6 +127,4 @@ async function Get_currencies_tickers_conf_List(myconnection) {
   return currencies_tickers_conf_List_Array;
 }
 
-//test(Done);
-start();
-//getTiker(1,Done);
+module.exports.start = start;
