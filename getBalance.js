@@ -13,7 +13,6 @@ var MyworkWEB = require("./workWEB");
 async function Get_pool_stat_WEB(connection, url) {
   let res = {};
   try {
-    //var restp = await asyncgetJSON(url);
     res = await phin({
       url: url,
       parse: "json"
@@ -35,34 +34,47 @@ async function start() {
     myconnection.End();
     return 0;
   }
+  let calls = [];
   for (let wallet_conf of wallets_conf_array) {
-    console.log(
-      wallet_conf.url,
-      wallet_conf.balance_key,
-      wallet_conf.balance_immature_key,
-      wallet_conf.chek
-    );
-    //let opt = [wallet_conf.balance_key, wallet_conf.balance_immature_key];
-    let opt = new Object();
-    opt.balance = wallet_conf.balance_key;
-    opt.balance_immature = wallet_conf.balance_immature_key;
-    let res = await MyworkWEB.WebGetData(
-      wallet_conf.url,
-      opt,
-      wallet_conf.chek
-    );
-    console.log(
-      wallet_conf.url,
-      "balance:",
-      res.balance,
-      "balance_immature:",
-      res.balance_immature
-    );
+    calls.push(BalancesProcessing(myconnection, wallet_conf));
   }
+  await Promise.all(calls);
   //пройтись по кошелькам и забрать данные
   //обновить таблицу балансы
   //раз в сутки запускать функцию которая берет текущий баланс и записывает его в историю
   myconnection.End();
+}
+
+async function BalancesProcessing(myconnection, wallet_conf) {
+  console.log(
+    wallet_conf.url,
+    wallet_conf.balance_key,
+    wallet_conf.balance_immature_key,
+    wallet_conf.chek
+  );
+  //let opt = [wallet_conf.balance_key, wallet_conf.balance_immature_key];
+  let opt = new Object();
+  opt.balance = wallet_conf.balance_key;
+  opt.balance_immature = wallet_conf.balance_immature_key;
+
+  let res = await MyworkWEB.WebGetData(wallet_conf.url, opt, wallet_conf.chek);
+  let dnow = moment().format("YYYY-MM-DD HH:mm:ss");
+  let param = [wallet_conf.wallet_id, dnow, res.balance, res.balance_immature];
+  let q = dedent`
+    INSERT INTO  balances SET 
+    wallet_id=?,
+    on_date=?,     
+    balance=?,
+    balance_immature=?`;
+  await myconnection.Insert(q, param);
+
+  console.log(
+    wallet_conf.url,
+    "balance:",
+    res.balance,
+    "balance_immature:",
+    res.balance_immature
+  );
 }
 
 async function GetALlWallets(myconnection) {

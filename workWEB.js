@@ -22,14 +22,27 @@ https.globalAgent.options.ca = rootCas;
 
 async function WebGetData(url, op_arr, chek) {
   let res = {};
-  //let dnow = moment().format("YYYY-MM-DD HH:mm:ss");
-  try {
-    res = await phin({
-      url: url,
-      parse: "json"
-    });
-  } catch (e) {
-    return error.MyError("cannot get data frome web ", url + e);
+
+  // реализация повторной поппытки получить данные с пула если есть проблемы со связью
+  let attempt = 0;
+  while (attempt < 3) {
+    let err = 0;
+    try {
+      res = await phin({
+        url: url,
+        parse: "json"
+      });
+    } catch (e) {
+      err = 1;
+      console.log("cannot get data frome web ", url + e);
+    }
+    if (res && !err) break;
+    await timeout(4000);
+    console.log("retry Get_pool_stat_WEB for ", url);
+    attempt++;
+  }
+  if (attempt == 3) {
+    return error.MyError("cannot get data frome web ", url);
   }
 
   //зачем нужен chek:
@@ -37,41 +50,21 @@ async function WebGetData(url, op_arr, chek) {
   //и для доступа к искомым данным нужен будет правильный индекс так как маска данных будет в базе со спец символом на месте индекса а поче чек будет содержать условие поиска
   //поэтму нужно найти этот индекс  и скорректировать все маски подставив его вместо специального символа
 
-  res = res.body;
+  if (chek) op_arr = await Fix_item_options(res, op_arr, chek);
+  if (!op_arr) return 0;
   let Data = {};
   for (let opt in op_arr) {
-    if (chek) opt = Fix_item_options(opt, chek);
     Data[opt] = get(res, op_arr[opt]);
   }
-  //op_arr = await Fix_item_options(op_arr);
-
-  /*
-  let last = get(res, last_key);
-  let volume = 0;
-  if (volume_key) volume = get(res, volume_key);
-  let ask = 0;
-  if (ask_key) ask = get(res, ask_key);
-  let bid = 0;
-  if (bid_key) bid = get(res, bid_key);
-  //dnow, last, volume, ask, bid
-  return [dnow, last, volume, ask, bid];*/
   return Data;
 }
 
-async function Fix_item_options( /////не работает!!!!!!!!!!!
-  res,
-  last_key,
-  volume_key,
-  ask_key,
-  bid_key,
-  chek
-) {
-  /////не работает!!!!!!!!!!!
-  /////не работает!!!!!!!!!!!
-  /////не работает!!!!!!!!!!!
-  /////не работает!!!!!!!!!!!
+function timeout(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-  // fixkey
+async function Fix_item_options(res, op_arr, chek) {
+  // подготовка выражения условия
   let chekExpresson = chek.split("=");
   //проверить что res это массив
 
@@ -80,20 +73,25 @@ async function Fix_item_options( /////не работает!!!!!!!!!!!
   //проверить что длина res больше единицы
   //if (res.body.length > 1) console.log("длина массива больше 1");
   //пробежаться найти нужный индекс
-  let id;
+  let id = -1;
   for (let i = 0; i < res.body.length; i++) {
-    //console.log(get(res.body[i], chekExpresson[0]) + " " + chekExpresson[1]); // res.body[i].id="ULT_BTC")
     if (get(res.body[i], chekExpresson[0]) == chekExpresson[1]) {
       id = i;
       break;
     }
   }
+  if (id == -1) return 0;
   //скоректировать все маски
-  last_key = last_key.replace("$", id);
-  volume_key = volume_key.replace("$", id);
-  ask_key = ask_key.replace("$", id);
-  bid_key = bid_key.replace("$", id);
-  return [last_key, volume_key, ask_key, bid_key];
+
+  for (let opt in op_arr) {
+    op_arr[opt] = op_arr[opt].replace("$", id);
+  }
+
+  //last_key = last_key.replace("$", id);
+  //volume_key = volume_key.replace("$", id);
+  //ask_key = ask_key.replace("$", id);
+  //bid_key = bid_key.replace("$", id);
+  return op_arr;
 }
 
 module.exports.WebGetData = WebGetData;
