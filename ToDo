@@ -7,52 +7,6 @@ MVC можно ли тут использовать
 
 fix
 
-error.js:25
-2018-04-12 16:03:01 config not found in new data http://api.bsod.pw/api/currencies name:EGAMING algo:scrypt # error
-error.js:11
-Unexpected error occurred in INSERT during writeData error.WriteSQL processing - connection.execute is not a function
-error.js:25
-2018-04-12 16:03:02 config not found in new data https://hashfaster.com/api/currencies name:TEST algo:xevan # error
-error.js:11
-Unexpected error occurred in INSERT during writeData error.WriteSQL processing - connection.execute is not a function
-error.js:25
-2018-04-12 16:03:03 выполнено
-start.js:333
-2018-04-12 16:08:08 config not found in new data https://protopool.net/api/currencies name:RAVEN algo:x16r # error
-error.js:11
-Unexpected error occurred in INSERT during writeData error.WriteSQL processing - connection.execute is not a function
-error.js:25
-2018-04-12 16:08:08 config not found in new data http://angrypool.com/api/currencies name:NATIVEAMERICAN algo:scrypt # error
-error.js:11
-Unexpected error occurred in INSERT during writeData error.WriteSQL processing - connection.execute is not a function
-error.js:25
-2018-04-12 16:08:09 config not found in new data https://hashfaster.com/api/currencies name:TEST algo:xevan # error
-error.js:11
-Unexpected error occurred in INSERT during writeData error.WriteSQL processing - connection.execute is not a function
-error.js:25
-2018-04-12 16:08:10 config not found in new data http://api.bsod.pw/api/currencies name:EGAMING algo:scrypt # error
-error.js:11
-Unexpected error occurred in INSERT during writeData error.WriteSQL processing - connection.execute is not a function
-error.js:25
-2018-04-12 16:08:10 выполнено
-start.js:333
-2018-04-12 16:13:01 config not found in new data https://protopool.net/api/currencies name:RAVEN algo:x16r # error
-error.js:11
-Unexpected error occurred in INSERT during writeData error.WriteSQL processing - connection.execute is not a function
-error.js:25
-2018-04-12 16:13:02 config not found in new data http://angrypool.com/api/currencies name:NATIVEAMERICAN algo:scrypt # error
-error.js:11
-Unexpected error occurred in INSERT during writeData error.WriteSQL processing - connection.execute is not a function
-error.js:25
-2018-04-12 16:13:03 config not found in new data http://api.bsod.pw/api/currencies name:EGAMING algo:scrypt # error
-error.js:11
-Unexpected error occurred in INSERT during writeData error.WriteSQL processing - connection.execute is not a function
-error.js:25
-2018-04-12 16:13:04 config not found in new data https://hashfaster.com/api/currencies name:TEST algo:xevan # error
-error.js:11
-Unexpected error occurred in INSERT during writeData error.WriteSQL processing - connection.execute is not a function
-error.js:25
-2018-04-12 16:13:05 выполнено
 
 прочитать
 https://habrahabr.ru/company/ruvds/blog/339176/

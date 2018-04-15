@@ -21,11 +21,13 @@ async function WriteSQL(err, Data) {
       connection = await DBconnect();
     } catch (e) {
       console.log(e);
+      return 0;
     }
     console.log(
       moment().format("YYYY-MM-DD HH:mm:ss") + " " + err + " " + Data
     );
     let dnow = moment().format("YYYY-MM-DD HH:mm:ss");
+
     try {
       await connection.execute(
         dedent`
@@ -41,7 +43,9 @@ async function WriteSQL(err, Data) {
         e.message
       );
     }
+
     connection.end();
+
     return 0;
   } else console.log(Data);
   return Data;

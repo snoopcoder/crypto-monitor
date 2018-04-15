@@ -134,8 +134,9 @@ async function PullPoolStat(connection, pool_id, url) {
           " algo:" +
           algo +
           " #",
-        "error"
+        "remove from config"
       );
+      await DeleteConfig(connection, conf);
       continue;
     }
 
@@ -157,6 +158,60 @@ async function PullPoolStat(connection, pool_id, url) {
     SomeCurrDisabledOnPool
   ) {
     await PullInfoForPool(connection, pool_api_data, curr_count, pool_id);
+  }
+}
+//226 261
+async function DeleteConfig(connection, conf) {
+  try {
+    await connection.execute(
+      dedent`
+    update pools_currencies_stats_conf 
+    set enable_monitoring=0
+    where 
+    id=?`,
+      [conf.id]
+    );
+  } catch (e) {
+    return error.WriteSQL(
+      "Unexpected error occurred in delete during DeleteConfig processing -",
+      e.message
+    );
+  }
+  let data;
+  try {
+    [data, fields] = await connection.execute(
+      dedent`
+      select currencies.name,algos.name,pools.name 
+      from 
+      pools_currencies_stats_conf 
+      join pools 
+      join algos 
+      join currencies 
+      on 
+      pools_currencies_stats_conf.currencies_id=currencies.id 
+      and pools_currencies_stats_conf.pool_id=pools.id 
+      and pools_currencies_stats_conf.algo_id = algos.id  
+      where 
+      pools_currencies_stats_conf.id=?;`,
+      [conf.id]
+    );
+  } catch (e) {
+    return Error("error select from DB in GetAlgoSymbol", e);
+  }
+  try {
+    let dnow = moment().format("YYYY-MM-DD HH:mm:ss");
+    //INSERT INTO  pools SET name="bsod.pw", url="http://api.bsod.pw/api/currencies", coins_count=1;
+    await connection.execute(
+      dedent`
+      INSERT INTO pools_delist SET
+      ondate=?,
+      pool_id=?,
+      currency_id=?,
+      algo_id=?;`,
+      [dnow, conf.pool_id, conf.currencies_id, conf.algo_id]
+    );
+  } catch (e) {
+    return Error("error select from DB in GetAlgoSymbol", e);
   }
 }
 
