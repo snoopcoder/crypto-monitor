@@ -9,3 +9,23 @@ where currencies.name like "%MAGI%" or currencies.name like "%DIGITAL%" or curre
 
 -- delete from pools_currencies_stats_conf where pools_currencies_stats_conf.pool_id = 7;
 -- delete from pools_currencies_stats where pools_currencies_stats.conf_id in (select id from pools_currencies_stats_conf where  pools_currencies_stats_conf.pool_id=7 );
+
+--select currencies.name, pools.name, algos.name from pools_list join pools join currencies join algos on pools_list.pool_id=pools.id and pools_list.currencies_id= currencies.id and  pools_list.algo_id = algos.id  
+order by currencies.name;
+
+
+select   from pools_list 
+LEFT OUTER JOIN   pools_currencies_stats_conf on pools_list.currencies_id = pools_currencies_stats_conf.currencies_id
+join currencies on pools_list.currencies_id = currencies.id 
+
+
+select pool_id,algo_id, COUNT(*) from pools_currencies_stats_conf
+group by pool_id,algo_id 
+HAVING COUNT(*) > 1
+
+
+
+select * from pools_currencies_stats INNER JOIN 
+(select id from pools_currencies_stats_conf where pools_currencies_stats_conf.currencies_id in ( select distinct currencies_id from pools_list)) e
+on e.id = pools_currencies_stats.conf_id
+where pools_currencies_stats.on_date > "2018-04-07 18:15:48"

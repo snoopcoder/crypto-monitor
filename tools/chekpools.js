@@ -49,6 +49,7 @@ async function PoolsProccess(connection) {
   */
 
   for (let i = 0; i < pools_array.length; i++) {
+    if (pools_array[i].id == 7) continue;
     let pool_api_data = await Get_pool_stat_WEB(connection, pools_array[i].url);
     if (pool_api_data == 0) continue;
     console.log("----------------------------------");

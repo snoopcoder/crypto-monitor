@@ -2,6 +2,7 @@ var moment = require("moment");
 const phin = require("phin").promisified;
 var get = require("lodash.get");
 const https = require("https");
+const error = require("./error");
 
 /*------<fix>-----------------------
 не забирает данные с сайтов с косяным сертификатом. в возникшей ошибке причина -не включен премежуточный сертификат в файл сертификата полученного с сервера

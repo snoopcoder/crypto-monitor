@@ -17,7 +17,6 @@ async function start() {
   await Pull_currencies_tickers(myconnection, currencies_tickers_conf_List);
   //Pull_pools_grubeddata(myconnection, pools_grubeddata_conf_List)
   myconnection.End();
-  console.log(moment().format("YYYY-MM-DD HH:mm:ss"), "выполнено");
   //await sleep();
 }
 

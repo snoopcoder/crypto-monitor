@@ -92,9 +92,10 @@ async function PullPoolStat(connection, pool_id, url) {
     pool_id
   );
   let curr_count;
-  let SomeCurrDisabledOnPool = false;
+
   //для каждой валюты из конфига получить новые данные и занести в базу
   for (let conf of curries_conf_checklist) {
+    let SomeCurrDisabledOnPool = false;
     //поиск идет по имени и алгоритму находим их значения в текстовом виде
     let algo = await GetAlgoSymbol(connection, conf.algo_id);
     let CurrencyPoolSymbol = await GetCurrencyPoolSymbol(
@@ -217,17 +218,21 @@ async function checkPoolData(connection, pool_id, pool_api_data) {
 async function PollConfigAdd(connection, pool_id, NewData) {
   for (let data of NewData) {
     let curr_id = await getCurrID(connection, data.name);
-    if (!curr_id)
-      return error.WriteSQL(
+    if (!curr_id) {
+      error.WriteSQL(
         "Невозможно добавить новый конфиг, нет данной монеты в базе -",
         data.name
       );
+      continue;
+    }
     let algo_id = await getAlgoID(connection, data.algo);
-    if (!algo_id)
-      return error.WriteSQL(
+    if (!algo_id) {
+      error.WriteSQL(
         "Невозможно добавить новый конфиг, нет подходящего алгоритма -",
         data.algo
       );
+      continue;
+    }
     //Добавить запись в конфиг
     //Добавить инфо о листинге
     try {
