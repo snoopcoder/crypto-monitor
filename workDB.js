@@ -23,7 +23,7 @@ function MyDBclass(connection) {
 }
 
 MyDBclass.prototype.End = function() {
-  this.connection.release();
+  this.connection.end();
 };
 
 MyDBclass.prototype.Select = async function(q, param, LogToSQL) {
