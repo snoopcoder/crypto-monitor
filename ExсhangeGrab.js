@@ -43,6 +43,8 @@ async function Pull_currensy_ticker(myconnection, currencies_tickers_conf_id) {
   opt.bid = bid_key;
 
   let { last, volume, ask, bid } = await MyworkWEB.WebGetData(url, opt, chek);
+  //Ошибка в получении данных выходим
+  if (!last || !volume || !ask || !bid) return 0;
 
   let dnow = moment().format("YYYY-MM-DD HH:mm:ss");
 

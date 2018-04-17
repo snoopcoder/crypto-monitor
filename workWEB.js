@@ -43,7 +43,7 @@ async function WebGetData(url, op_arr, chek) {
     attempt++;
   }
   if (attempt == 3) {
-    return error.MyError("cannot get data frome web ", url);
+    return error.MyError("cannot get data from web ", url);
   }
 
   //зачем нужен chek:
