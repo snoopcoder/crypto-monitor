@@ -115,15 +115,13 @@ async function Pull_currencies_tickers(
 
 //currencies_tickers_conf
 async function Get_currencies_tickers_conf_List(myconnection) {
-  let q = "SELECT * FROM sheduler5min";
+  let q = "SELECT id FROM currencies_tickers_conf where enable_monitoring=1";
   let currencies_tickers_conf_List = await myconnection.Select(q);
   if (!currencies_tickers_conf_List.length) return 0;
 
   let currencies_tickers_conf_List_Array = [];
   for (let currencies_ticker of currencies_tickers_conf_List) {
-    currencies_tickers_conf_List_Array.push(
-      currencies_ticker.currencies_tickers_conf_id
-    );
+    currencies_tickers_conf_List_Array.push(currencies_ticker.id);
   }
   return currencies_tickers_conf_List_Array;
 }
